@@ -4,8 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+bytes = "1.10.1"
 libc = "0.2.177"
+thiserror = "2.0.17"
 tokio = { version = "1.48.0", features = ["full"] }
 tokio-splice2 = "0.3.2"
+tokio-util = { version = "0.7.16", features = ["codec"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
