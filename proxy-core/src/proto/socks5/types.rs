@@ -9,7 +9,6 @@
 //! - Enumeration types for protocol fields (commands, reply codes, address types, etc.)
 //! - Error types for protocol violations
 //! - Address representation types
-use std::io;
 use std::net::{SocketAddrV4, SocketAddrV6};
 
 use thiserror::Error;
@@ -19,6 +18,8 @@ use thiserror::Error;
 /// This constant represents the version field in SOCKS5 messages.
 /// All SOCKS5 messages must start with this version byte.
 ///
+/// # RFC Reference
+///
 /// See [RFC 1928 Section 3](https://datatracker.ietf.org/doc/html/rfc1928#section-3).
 pub const SOCKS5_VER: u8 = 0x05;
 
@@ -26,6 +27,8 @@ pub const SOCKS5_VER: u8 = 0x05;
 ///
 /// This constant represents the version field in username/password
 /// authentication messages (RFC 1929).
+///
+/// # RFC Reference
 ///
 /// See [RFC 1929 Section 2](https://datatracker.ietf.org/doc/html/rfc1929#section-2).
 pub const SOCKS5_AUTH_VER: u8 = 0x01;
@@ -35,7 +38,9 @@ pub const SOCKS5_AUTH_VER: u8 = 0x01;
 /// This constant represents the expected value for reserved (RSV) fields
 /// in SOCKS5 messages. Reserved fields must be set to 0x00.
 ///
-/// See [RFC 1928 Section 4](https://datatracker.ietf.org/doc/html/rfc1928#section-4).
+/// # RFC Reference
+///
+/// See [RFC 1929 Section 4](https://datatracker.ietf.org/doc/html/rfc1929#section-4).
 pub const SOCKS5_RSV: u8 = 0x00;
 
 /// Errors that occur during parsing and validation of SOCKS5 protocol messages.
@@ -116,6 +121,8 @@ pub enum ProtocolError {
 /// - `0x02` - Username/Password
 /// - `0xFF` - No acceptable methods (server response only)
 ///
+/// # RFC Reference
+///
 /// See [RFC 1928 Section 3](https://datatracker.ietf.org/doc/html/rfc1928#section-3).
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -165,6 +172,8 @@ impl TryFrom<u8> for AuthMethod {
 /// This enum represents the STATUS field in the authentication response
 /// message defined in RFC 1929.
 ///
+/// # RFC Reference
+///
 /// See [RFC 1929 Section 2](https://datatracker.ietf.org/doc/html/rfc1929#section-2).
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -194,6 +203,8 @@ impl From<u8> for AuthStatus {
 /// Address type field (ATYP) values.
 ///
 /// This enum specifies the format of the address field in SOCKS5 messages.
+///
+/// # RFC Reference
 ///
 /// See [RFC 1928 Section 5](https://datatracker.ietf.org/doc/html/rfc1928#section-5).
 #[repr(u8)]
@@ -232,6 +243,8 @@ impl TryFrom<u8> for AddressType {
 /// SOCKS5 commands.
 ///
 /// This enum represents the CMD field in client connection requests.
+///
+/// # RFC Reference
 ///
 /// See [RFC 1928 Section 4](https://datatracker.ietf.org/doc/html/rfc1928#section-4).
 #[repr(u8)]
@@ -274,6 +287,8 @@ impl TryFrom<u8> for Command {
 ///
 /// This enum represents the REP field in server responses to client requests.
 /// It indicates the status of the requested operation.
+///
+/// # RFC Reference
 ///
 /// See [RFC 1928 Section 6](https://datatracker.ietf.org/doc/html/rfc1928#section-6).
 #[repr(u8)]
