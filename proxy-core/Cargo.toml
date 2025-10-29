@@ -4,7 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+async-trait = "0.1.89"
 bytes = "1.10.1"
+futures = "0.3.31"
 libc = "0.2.177"
 thiserror = "2.0.17"
 tokio = { version = "1.48.0", features = ["full"] }
