@@ -1,15 +1,35 @@
 //! SOCKS5 protocol types and constants.
 //!
 //! This module provides type definitions for the SOCKS5 protocol as specified in:
-//! - [RFC 1928](https://datatracker.ietf.org/doc/html/rfc1928) - SOCKS Protocol Version 5
-//! - [RFC 1929](https://datatracker.ietf.org/doc/html/rfc1929) - Username/Password Authentication for SOCKS V5
+//! - [RFC 1928] - SOCKS Protocol Version 5
+//! - [RFC 1929] - Username/Password Authentication for SOCKS V5
 //!
-//! It includes:
-//! - Protocol constants (version numbers, reserved values)
-//! - Enumeration types for protocol fields (commands, reply codes, address types, etc.)
-//! - Error types for protocol violations
-//! - Address representation types
-use std::net::{SocketAddrV4, SocketAddrV6};
+//! # Contents
+//!
+//! ## Protocol Types
+//!
+//! These types directly represent wire format fields defined in the SOCKS5 specification:
+//!
+//! - [`SOCKS5_VER`], [`SOCKS5_AUTH_VER`], [`SOCKS5_RSV`] - Protocol constants
+//! - [`AuthMethod`] - Authentication method identifiers (METHOD field)
+//! - [`AuthStatus`] - Authentication result codes (STATUS field)
+//! - [`AddressType`] - Address type identifiers (ATYP field)
+//! - [`Command`] - Client command codes (CMD field)
+//! - [`Reply`] - Server reply codes (REP field)
+//! - [`ProtocolError`] - Wire format validation errors
+//!
+//! ## Address Abstraction
+//!
+//! The [`Address`] enum is a higher-level abstraction that combines the address type (ATYP),
+//! address data, and port into a single convenient type. While not a direct protocol entity,
+//! it closely models the address representation in SOCKS5 messages and provides utility methods.
+//!
+//! [RFC 1928]: https://datatracker.ietf.org/doc/html/rfc1928
+//! [RFC 1929]: https://datatracker.ietf.org/doc/html/rfc1929
+use std::io;
+use std::vec::IntoIter;
+use std::iter::{self, Once};
+use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6, ToSocketAddrs};
 
 use thiserror::Error;
 
@@ -357,11 +377,22 @@ impl TryFrom<u8> for Reply {
     }
 }
 
-/// Network address representation for SOCKS5 protocol.
+/// Network address abstraction for SOCKS5 protocol.
 ///
-/// This enum encapsulates the different address formats supported by SOCKS5:
-/// IPv4, IPv6, and domain names. It combines the address type (ATYP) and
-/// address data into a single unified type.
+/// This enum provides a unified representation of the three address types supported
+/// by SOCKS5: IPv4, IPv6, and domain names. While not a direct wire format entity,
+/// it encapsulates the combination of address type ([`AddressType`]), address data,
+/// and port number that appears in SOCKS5 messages.
+///
+/// # Design Note
+///
+/// In the wire format, addresses are represented as separate fields:
+/// - ATYP (1 byte) - address type
+/// - Address data (variable length, depending on ATYP)
+/// - Port (2 bytes)
+///
+/// This enum combines these fields into a single convenient type for easier
+/// manipulation and provides utility methods for address resolution and conversion.
 ///
 /// # Examples
 ///
@@ -383,22 +414,42 @@ impl TryFrom<u8> for Reply {
 pub enum Address {
     /// IPv4 address with port.
     ///
-    /// Represented as 4 bytes for the IPv4 address plus 2 bytes for the port
-    /// in network byte order.
+    /// In the wire format, this is represented as:
+    /// - ATYP: 0x01
+    /// - Address: 4 octets (IPv4 address)
+    /// - Port: 2 octets (network byte order)
     Ipv4(SocketAddrV4),
 
     /// Domain name with port.
     ///
-    /// The domain name is stored as a String (must be valid UTF-8) and the
-    /// port as a u16. On the wire, the domain is prefixed with a single byte
-    /// indicating its length (1-255 bytes).
+    /// The domain name must be valid UTF-8. In the wire format, this is represented as:
+    /// - ATYP: 0x03
+    /// - Address: 1 octet (domain length, 1-255) + domain octets (no null terminator)
+    /// - Port: 2 octets (network byte order)
     Domain(String, u16),
 
     /// IPv6 address with port.
     ///
-    /// Represented as 16 bytes for the IPv6 address plus 2 bytes for the port
-    /// in network byte order.
+    /// In the wire format, this is represented as:
+    /// - ATYP: 0x04
+    /// - Address: 16 octets (IPv6 address)
+    /// - Port: 2 octets (network byte order)
     Ipv6(SocketAddrV6),
+}
+
+impl ToSocketAddrs for Address {
+    type Iter = AddressIter;
+
+    fn to_socket_addrs(&self) -> io::Result<Self::Iter> {
+        match self {
+            Self::Ipv4(addr) => Ok(AddressIter::One(iter::once(SocketAddr::V4(*addr)))),
+            Self::Ipv6(addr) => Ok(AddressIter::One(iter::once(SocketAddr::V6(*addr)))),
+            Self::Domain(domain, port) => {
+                let iter: IntoIter<SocketAddr> = (domain.as_str(), *port).to_socket_addrs()?;
+                Ok(AddressIter::Many(iter))
+            }
+        }
+    }
 }
 
 impl Address {
@@ -458,6 +509,38 @@ impl Address {
             Self::Ipv4(addr) => addr.port(),
             Self::Ipv6(addr) => addr.port(),
             Self::Domain(_, port) => *port,
+        }
+    }
+}
+
+/// Iterator over socket addresses produced by [`Address`] resolution.
+///
+/// This type is returned by [`Address::to_socket_addrs`].
+/// It handles both single-address cases (IPv4/IPv6) and multi-address cases
+/// (domain names that may resolve to multiple IPs).
+#[derive(Debug)]
+pub enum AddressIter {
+    /// Iterator over a single socket address (for IP addresses).
+    One(Once<SocketAddr>),
+
+    /// Iterator over multiple socket addresses (for domain names).
+    Many(IntoIter<SocketAddr>),
+}
+
+impl Iterator for AddressIter {
+    type Item = SocketAddr;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::One(iter) => iter.next(),
+            Self::Many(iter) => iter.next(),
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match self {
+            Self::One(iter) => iter.size_hint(),
+            Self::Many(iter) => iter.size_hint(),
         }
     }
 }
