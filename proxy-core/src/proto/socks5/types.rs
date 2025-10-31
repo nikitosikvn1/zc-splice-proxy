@@ -437,6 +437,33 @@ pub enum Address {
     Ipv6(SocketAddrV6),
 }
 
+impl From<SocketAddr> for Address {
+    fn from(addr: SocketAddr) -> Self {
+        match addr {
+            SocketAddr::V4(addr) => Self::Ipv4(addr),
+            SocketAddr::V6(addr) => Self::Ipv6(addr),
+        }
+    }
+}
+
+impl From<SocketAddrV4> for Address {
+    fn from(addr: SocketAddrV4) -> Self {
+        Self::Ipv4(addr)
+    }
+}
+
+impl From<SocketAddrV6> for Address {
+    fn from(addr: SocketAddrV6) -> Self {
+        Self::Ipv6(addr)
+    }
+}
+
+impl<S: Into<String>> From<(S, u16)> for Address {
+    fn from((domain, port): (S, u16)) -> Self {
+        Self::Domain(domain.into(), port)
+    }
+}
+
 impl ToSocketAddrs for Address {
     type Iter = AddressIter;
 
