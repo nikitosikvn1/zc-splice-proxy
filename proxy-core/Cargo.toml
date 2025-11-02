@@ -6,8 +6,13 @@ edition = "2024"
 [dependencies]
 async-trait = "0.1.89"
 bytes = "1.10.1"
+config = "0.15.18"
 futures = "0.3.31"
-libc = "0.2.177"
+hickory-resolver = "0.25.2"
+humantime-serde = "1.1.1"
+serde = { version = "1.0.228", features = ["derive"] }
+smallvec = "1.15.1"
+socket2 = "0.6.1"
 thiserror = "2.0.17"
 tokio = { version = "1.48.0", features = ["full"] }
 tokio-splice2 = "0.3.2"
