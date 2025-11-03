@@ -41,8 +41,9 @@
 use std::io;
 
 use tokio::net::{TcpStream, UdpSocket};
-use tokio_splice2::traffic::TrafficResult;
 use async_trait::async_trait;
+#[cfg(target_os = "linux")]
+use tokio_splice2::traffic::TrafficResult;
 
 /// Traffic statistics for a completed relay operation.
 ///
