@@ -60,7 +60,7 @@ pub const SOCKS5_AUTH_VER: u8 = 0x01;
 ///
 /// # RFC Reference
 ///
-/// See [RFC 1929 Section 4](https://datatracker.ietf.org/doc/html/rfc1929#section-4).
+/// See [RFC 1928 Section 4](https://datatracker.ietf.org/doc/html/rfc1928#section-4).
 pub const SOCKS5_RSV: u8 = 0x00;
 
 /// Errors that occur during parsing and validation of SOCKS5 protocol messages.
