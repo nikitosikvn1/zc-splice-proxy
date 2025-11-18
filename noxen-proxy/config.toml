@@ -1,0 +1,10 @@
+[server]
+listen_address = "0.0.0.0:1080"
+shutdown_timeout = "60s"
+backlog_size = 1024
+max_connections = 0
+
+[socks5]
+allow_no_auth = true
+connect_timeout = "10s"
+bind_timeout = "40s"

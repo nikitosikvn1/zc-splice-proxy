@@ -1,0 +1,9 @@
+[package]
+name = "noxen-socks5"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+thiserror = "2.0.17"
+tokio-util = { version = "0.7.17", features = ["codec"] }
+tracing = "0.1.41"
