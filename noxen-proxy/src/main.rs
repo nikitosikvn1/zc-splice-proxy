@@ -1,19 +1,18 @@
-#![allow(unused)]
-use std::{io, future};
+use std::io;
 use std::sync::Arc;
-use std::net::SocketAddr;
 
 use tokio::signal;
 use tokio::net::TcpListener;
 
-use proxy_core::{server, telemetry};
-use proxy_core::config::Config;
-use proxy_core::handler::socks5::context::Socks5Context;
-use proxy_core::auth::auth_provider::StaticAuthProvider;
+use noxen_proxy::{server, telemetry};
+use noxen_proxy::config::Config;
+use noxen_proxy::handler::socks5::context::Socks5Context;
+use noxen_proxy::auth::auth_provider::StaticAuthProvider;
+use noxen_proxy::relay::strategy::StandardUdpRelay;
 #[cfg(target_os = "linux")]
-use proxy_core::relay::strategy::{SpliceRelay, StandardUdpRelay};
+use noxen_proxy::relay::strategy::SpliceRelay;
 #[cfg(not(target_os = "linux"))]
-use proxy_core::relay::strategy::{CopyRelay, StandardUdpRelay};
+use noxen_proxy::relay::strategy::CopyRelay;
 
 const DEFAULT_CONFIG_FILE: &str = "config.toml";
 
@@ -21,11 +20,11 @@ const DEFAULT_CONFIG_FILE: &str = "config.toml";
 async fn main() -> io::Result<()> {
     let subscriber = telemetry::get_subscriber("proxy_core=info", io::stdout);
     telemetry::init_subscriber(subscriber);
-    tracing::info!("Starting SOCKS5 proxy server...");
 
     let config = Config::new(DEFAULT_CONFIG_FILE).expect("Failed to load config file");
     tracing::info!(?config, "Configuration loaded");
 
+    // TODO: implement more reasonable auth provider
     let auth_provider = StaticAuthProvider::new("uname", "passwd");
     let auth_provider: Arc<StaticAuthProvider> = Arc::new(auth_provider);
 
@@ -49,10 +48,9 @@ async fn main() -> io::Result<()> {
     });
 
     let listener = TcpListener::bind(&config.server.listen_address).await?;
-    let listen_addr: SocketAddr = listener.local_addr()?;
 
     tracing::info!(
-        addr = %listen_addr,
+        addr = %listener.local_addr()?,
         "Server listening, waiting for incoming connections"
     );
     server::run(listener, socks5_ctx, config.server, shutdown_signal()).await;
@@ -77,7 +75,7 @@ async fn shutdown_signal() {
     };
 
     #[cfg(not(unix))]
-    let terminate = future::pending::<()>();
+    let terminate = std::future::pending::<()>();
 
     tokio::select! {
         _ = ctrl_c => {

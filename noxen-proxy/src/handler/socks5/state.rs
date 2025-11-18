@@ -66,17 +66,17 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio_util::codec::{Framed, Encoder, Decoder};
 use futures::{StreamExt, SinkExt};
 use tracing::{Span, field, instrument};
+use noxen_socks5::types::{AuthMethod, AuthStatus, Command, Reply, Address};
+use noxen_socks5::messages::{
+    ClientGreeting, ServerGreeting, AuthRequest, AuthResponse, ClientRequest, ServerResponse,
+};
+use noxen_socks5::codecs::server::{GreetingCodec, AuthCodec, RequestResponseCodec};
 
 use crate::handler::socks5::error::Socks5Error;
 use crate::handler::socks5::context::Socks5Context;
 use crate::net::happy_eyeballs;
 use crate::relay::tunnel::{Tunnel, TcpTunnel};
 use crate::relay::strategy::{TcpRelayStrategy, UdpRelayStrategy};
-use crate::proto::socks5::{
-    ClientGreeting, ServerGreeting, AuthRequest, AuthResponse, ClientRequest, ServerResponse,
-};
-use crate::proto::socks5::types::{AuthMethod, AuthStatus, Command, Reply, Address};
-use crate::proto::socks5::codecs::{GreetingCodec, AuthCodec, RequestResponseCodec};
 
 /// Result type alias for SOCKS5 operations.
 type Socks5Result<T> = std::result::Result<T, Socks5Error>;

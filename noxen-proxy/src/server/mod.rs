@@ -3,13 +3,13 @@ pub mod shutdown;
 use std::io;
 use std::sync::Arc;
 use std::future::Future;
-use std::net::SocketAddr;
 
 use tokio::time;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{broadcast, mpsc, Semaphore, OwnedSemaphorePermit};
 
 use crate::config::ServerConfig;
+use crate::relay::tunnel::Tunnel;
 use crate::server::shutdown::Shutdown;
 use crate::handler::socks5::context::Socks5Context;
 use crate::handler::socks5::state::Socks5Handler;
@@ -17,8 +17,8 @@ use crate::relay::strategy::{TcpRelayStrategy, Traffic, UdpRelayStrategy};
 
 struct Listener<TR, UR> {
     listener: TcpListener,
-    socks5_ctx: Arc<Socks5Context<TR, UR>>,
     config: ServerConfig,
+    socks5_ctx: Arc<Socks5Context<TR, UR>>,
     limit_connections: Option<Arc<Semaphore>>,
     notify_shutdown: broadcast::Sender<()>,
     shutdown_complete_tx: mpsc::Sender<()>,
@@ -38,8 +38,7 @@ where
                     None
                 };
 
-            let (stream, _addr) = self.listener.accept().await?;
-            let peer_addr: Option<SocketAddr> = stream.peer_addr().ok();
+            let (stream, peer_addr) = self.listener.accept().await?;
             tracing::debug!(?peer_addr, "Accepted new connection");
 
             let handler: Handler<TR, UR> = Handler {
@@ -64,8 +63,8 @@ where
 }
 
 struct Handler<TR, UR> {
-    socks5_ctx: Arc<Socks5Context<TR, UR>>,
     stream: TcpStream,
+    socks5_ctx: Arc<Socks5Context<TR, UR>>,
     shutdown: Shutdown,
     _shutdown_complete: mpsc::Sender<()>,
 }
@@ -102,7 +101,7 @@ where
         };
 
         // Phase 2: Request processing
-        let tunnel = tokio::select! {
+        let tunnel: Tunnel<TR, UR> = tokio::select! {
             result = handler.handle() => {
                 match result {
                     Ok(tunnel) => tunnel,
@@ -165,9 +164,7 @@ pub async fn run<TR, UR>(
                 tracing::error!(error = ?e, "Failed to accept connections");
             }
         }
-        _ = shutdown => {
-            tracing::info!("Shutdown signal received");
-        }
+        _ = shutdown => tracing::info!("Shutdown signal received")
     }
 
     let Listener {

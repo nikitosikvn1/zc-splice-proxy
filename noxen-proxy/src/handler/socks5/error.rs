@@ -21,11 +21,12 @@
 use std::io::{self, ErrorKind};
 
 use thiserror::Error;
+use noxen_socks5::types::Reply;
+use noxen_socks5::error::ProtocolError;
+use noxen_socks5::codecs::error::CodecError;
 
 use crate::auth::auth_provider::AuthError;
 use crate::net::happy_eyeballs::HappyEyeballsError;
-use crate::proto::socks5::types::{ProtocolError, Reply};
-use crate::proto::socks5::codecs::Socks5CodecError;
 
 /// Errors that can occur during SOCKS5 connection handling.
 #[derive(Debug, Error)]
@@ -103,11 +104,11 @@ impl Socks5Error {
     }
 }
 
-impl From<Socks5CodecError> for Socks5Error {
-    fn from(error: Socks5CodecError) -> Self {
+impl From<CodecError> for Socks5Error {
+    fn from(error: CodecError) -> Self {
         match error {
-            Socks5CodecError::Io(e) => Self::Io(e),
-            Socks5CodecError::Protocol(e) => Self::Protocol(e),
+            CodecError::Io(e) => Self::Io(e),
+            CodecError::Protocol(e) => Self::Protocol(e),
         }
     }
 }

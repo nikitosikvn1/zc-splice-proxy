@@ -26,7 +26,7 @@
 //! # Usage
 //!
 //! ```rust,ignore
-//! use proxy_core::config::Config;
+//! use noxen_proxy::config::Config;
 //!
 //! // Load from file with environment variable overrides
 //! let config = Config::new("config.toml")?;

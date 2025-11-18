@@ -33,10 +33,10 @@
 //!
 //! ```rust,ignore
 //! #[cfg(target_os = "linux")]
-//! use proxy_core::relay::strategy::SpliceRelay as TcpRelay;
+//! use noxen_proxy::relay::strategy::SpliceRelay as TcpRelay;
 //!
 //! #[cfg(not(target_os = "linux"))]
-//! use proxy_core::relay::strategy::CopyRelay as TcpRelay;
+//! use noxen_proxy::relay::strategy::CopyRelay as TcpRelay;
 //! ```
 use std::io;
 
